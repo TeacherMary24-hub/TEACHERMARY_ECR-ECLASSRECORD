@@ -1039,19 +1039,40 @@
             document.getElementById('header-tooltip').style.display = 'none';
         }
 
-        document.getElementById('add-student-form').addEventListener('submit', function(e) {
+        // Updated Form listener to sync new student to Google Sheets
+        document.getElementById('add-student-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            studentsData.push({
+            const newStudent = {
                 id: Date.now(),
                 name: document.getElementById('new-name').value.trim(),
                 grade: document.getElementById('new-grade').value,
                 section: document.getElementById('new-section').value,
                 subject: document.getElementById('new-subject').value,
                 scores: {}
-            });
+            };
+            
+            studentsData.push(newStudent);
             alert("Student added successfully!");
             document.getElementById('new-name').value = '';
             renderAll();
+
+            // Sync new student payload to Google Apps Script cloud backend
+            if (!WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) {
+                try {
+                    await fetch(WEB_APP_URL, {
+                        method: "POST",
+                        mode: "no-cors",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            sheet: "Scores",
+                            action: "addStudent",
+                            ...newStudent
+                        })
+                    });
+                } catch (err) {
+                    console.error("Failed to sync new student to cloud:", err);
+                }
+            }
         });
 
         window.handleFileUpload = function() {
