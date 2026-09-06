@@ -894,8 +894,8 @@
             ]
         };
 
+        // Doe, John has been completely removed here:
         let studentsData = [
-            { id: 1, name: "Doe, John", grade: "Grade 3", section: "St. Monica", subject: "Makabansa", scores: { 'ww_1': '45', 'pt_1': '48', 'exam_mid': '40', 'exam_term': '42' } },
             { id: 2, name: "Smith, Jane", grade: "Grade 3", section: "St. Monica", subject: "Makabansa", scores: { 'ww_1': '50', 'pt_1': '42', 'exam_mid': '45', 'exam_term': '' } }
         ];
 
@@ -1312,7 +1312,6 @@
                     if (!s.scores) s.scores = {};
                     let tr = document.createElement('tr');
                     
-                    // FIXED: changed from oninput to onchange to prevent focus loss issues
                     let rowHTML = `<td><input type="text" class="table-name-input" value="${s.name}" onchange="updateStudentName(${s.id}, this.value)"></td>`;
 
                     if (showWW) {
