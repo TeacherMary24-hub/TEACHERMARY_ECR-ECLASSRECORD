@@ -1312,7 +1312,8 @@
                     if (!s.scores) s.scores = {};
                     let tr = document.createElement('tr');
                     
-                    let rowHTML = `<td><input type="text" class="table-name-input" value="${s.name}" oninput="updateStudentName(${s.id}, this.value)"></td>`;
+                    // FIXED: changed from oninput to onchange to prevent focus loss issues
+                    let rowHTML = `<td><input type="text" class="table-name-input" value="${s.name}" onchange="updateStudentName(${s.id}, this.value)"></td>`;
 
                     if (showWW) {
                         if (!isSummaryOnlyMode) {
