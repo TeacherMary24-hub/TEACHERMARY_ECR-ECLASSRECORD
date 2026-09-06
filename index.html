@@ -899,23 +899,40 @@
             { id: 2, name: "Smith, Jane", grade: "Grade 3", section: "St. Monica", subject: "Makabansa", scores: { 'ww_1': '50', 'pt_1': '42', 'exam_mid': '45', 'exam_term': '' } }
         ];
 
-        // Google Sheets Cloud Sync Functions
-        async function fetchCloudData() {
-            if (WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return; // Skip if URL isn't set yet
-            try {
-                let response = await fetch(`${WEB_APP_URL}?action=getData`);
-                let data = await response.json();
-                if (data.students) studentsData = data.students;
-                if (data.assessments) {
-                    assessments.ww = data.assessments.filter(a => a.Type === 'ww');
-                    assessments.pt = data.assessments.filter(a => a.Type === 'pt');
-                    assessments.exam = data.assessments.filter(a => a.Type === 'exam');
+        // Google Sheets Cloud Sync via JSONP (Bypasses CORS restrictions on GitHub Pages)
+        function fetchCloudData() {
+            if (WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return; 
+            
+            var callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+            
+            window[callbackName] = function(data) {
+                delete window[callbackName];
+                var scriptElement = document.getElementById('jsonpScript');
+                if (scriptElement) scriptElement.remove();
+                
+                try {
+                    if (data.students) studentsData = data.students;
+                    if (data.assessments) {
+                        assessments.ww = data.assessments.filter(a => a.Type === 'ww');
+                        assessments.pt = data.assessments.filter(a => a.Type === 'pt');
+                        assessments.exam = data.assessments.filter(a => a.Type === 'exam');
+                    }
+                    renderAll();
+                    console.log("Synced successfully with Google Sheet via JSONP!");
+                } catch (err) {
+                    console.error("Error processing cloud data:", err);
                 }
-                renderAll();
-                console.log("Synced successfully with Google Sheet!");
-            } catch (err) {
-                console.error("Cloud sync fetch failed, using local backup state:", err);
-            }
+            };
+
+            var script = document.createElement('script');
+            script.id = 'jsonpScript';
+            script.src = `${WEB_APP_URL}?action=getData&callback=` + callbackName;
+            
+            script.onerror = function() {
+                console.error("Cloud sync fetch failed, using local backup state.");
+            };
+
+            document.body.appendChild(script);
         }
 
         async function syncScoreToCloud(studentId, assessmentId, score) {
