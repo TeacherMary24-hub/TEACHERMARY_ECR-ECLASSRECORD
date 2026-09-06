@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Mary's E-Class Record</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS Library for Excel & CSV Parsing/Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #047857;          
+            --primary-hover: #065f46;    
+            --accent: #d97706;           
+            --summary-bg: #fef3c7;       
+            --summary-border: #f59e0b;
+            --bg-main: #f0fdf4;          
+            --bg-card: #ffffff;
+            --text-main: #064e3b;        
+            --text-muted: #047857;       
+            --text-dark: #1e293b;        
+            --border: #cbd5e1;           
+            --sidebar-width: 260px;
+            --header-height: 70px;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(4, 120, 87, 0.08);
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Allow full page scrolling */
+        html, body {
+            background-color: var(--bg-main);
+            color: var(--text-dark);
+            height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+
+        .app-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+            color: white;
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius);
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .menu-item:hover {
+            background-color: #ecfdf5;
+            color: var(--primary-hover);
+        }
+
+        .menu-item.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin-left: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .top-nav {
+            height: var(--header-height);
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+
+        #current-view-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 600;
+            color: var(--text-main);
+            background: #f1f5f9;
+            padding: 0.5rem 1.25rem;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+        }
+
+        .user-profile img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 1.5rem 2rem;
+        }
+
+        .view-section {
+            display: none;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .view-section.active {
+            display: flex;
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            background-color: var(--bg-card);
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        select, input[type="text"], input[type="number"], input[type="date"], input[type="file"] {
+            padding: 0.55rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background-color: #fafafa;
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--primary);
+            background-color: var(--bg-card);
+        }
+
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding-left: 2.3rem;
+            background-color: var(--bg-card);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.55rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .btn-secondary {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background-color: var(--bg-main); }
+
+        .btn-danger-sm {
+            background-color: #fee2e2;
+            color: #b91c1c;
+            border: none;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* Details Setup Card */
+        .details-setup-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        /* Excel-like Table Container with Sticky Headers & Column */
+        .table-container {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            max-height: 600px;
+            overflow: auto; 
+            position: relative;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 0.4rem 0.4rem; 
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            font-size: 0.85rem;
+            background-clip: padding-box;
+            text-align: center;
+        }
+
+        th:first-child, td:first-child {
+            text-align: left; 
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+
+        /* Sticky Excel Table Header */
+        th {
+            background-color: #ecfdf5;
+            color: var(--text-main);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            user-select: none;
+        }
+
+        th:hover {
+            background-color: #d1fae5;
+        }
+
+        /* Sticky First Column (Name of Students) for Excel Sliding */
+        th:first-child, td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 5;
+            background-color: #ffffff;
+            border-right: 2px solid var(--border);
+        }
+
+        th:first-child {
+            z-index: 20; 
+            background-color: #ecfdf5;
+        }
+
+        td:first-child {
+            background-color: var(--bg-card);
+        }
+
+        /* Highlighted summary column headers */
+        th.summary-header {
+            background-color: var(--summary-bg) !important;
+            color: #92400e !important;
+            border-left: 2px dashed var(--summary-border);
+            border-right: 2px dashed var(--summary-border);
+        }
+
+        td.summary-cell {
+            background-color: #fffbeb !important;
+            font-weight: 700;
+            color: #b45309;
+            text-align: center;
+            border-left: 1px dashed var(--summary-border);
+            border-right: 1px dashed var(--summary-border);
+        }
+
+        tr:hover td {
+            background-color: #f0fdf4;
+        }
+
+        tr:hover td:first-child {
+            background-color: #f0fdf4;
+        }
+
+        tr:hover td.summary-cell {
+            background-color: #fef3c7 !important;
+        }
+
+        /* Compact score width adjusted to be a little bigger */
+        .table-input {
+            width: 62px;
+            padding: 0.45rem 0.3rem;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            margin: 0 auto;
+            display: block;
+            font-size: 1.05rem;
+        }
+
+        .table-name-input {
+            width: 180px;
+            padding: 0.3rem 0.5rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            white-space: nowrap;
+        }
+
+        /* Locked state styling */
+        .locked input {
+            border: none;
+            background: transparent;
+            pointer-events: none;
+            font-weight: 500;
+            color: var(--text-dark);
+            padding: 0;
+            width: auto;
+        }
+
+        /* Tooltip Popover - Fixed positioning to show at the top without clipping */
+        .tooltip-popover {
+            display: none;
+            position: fixed;
+            background: #1e293b;
+            color: #fff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            z-index: 9999;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        .tooltip-popover::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #1e293b transparent transparent transparent;
+        }
+
+        /* Searchable Encoder Grid Lists - Updated for Box Score alignment */
+        .searchable-encoder-wrapper {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .searchable-encoder-wrapper > div:first-child {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .searchable-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            max-height: 380px;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 600px;
+            align-self: center;
+        }
+
+        .searchable-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8fafc;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            width: 100%;
+        }
+
+        .searchable-row span {
+            font-weight: 600;
+            font-size: 1rem;
+            white-space: nowrap;
+            text-align: left;
+            flex: 1;
+        }
+
+        .searchable-row .table-input {
+            margin: 0;
+            flex-shrink: 0;
+        }
+
+        /* Number Pad Popup Modal - Made a little bigger */
+        .numpad-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .numpad-box {
+            background: white;
+            padding: 2.2rem;
+            border-radius: 18px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+            width: 360px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .numpad-display {
+            font-size: 2.6rem;
+            font-weight: 700;
+            padding: 0.75rem;
+            margin-bottom: 1.4rem;
+            background: #f1f5f9;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            color: var(--primary);
+            min-height: 72px;
+        }
+
+        .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .numpad-btn {
+            padding: 1.15rem;
+            font-size: 1.55rem;
+            font-weight: 600;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .numpad-btn:hover {
+            background: #ecfdf5;
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .numpad-btn.clear { background: #fee2e2; color: #b91c1c; }
+        .numpad-btn.done { background: var(--primary); color: white; grid-column: span 2; }
+
+        .missing-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .missing-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            border-left: 4px solid var(--accent);
+            border: 1px solid var(--border);
+        }
+
+        .missing-card h4 { font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text-dark); }
+        .missing-card p { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid fa-graduation-cap"></i> E-Class Record</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-target="dashboard-view"><i class="fa-solid fa-chart-line"></i> Dashboard</li>
+                <li class="menu-item" data-target="written-works-view"><i class="fa-solid fa-book-open"></i> Written Works</li>
+                <li class="menu-item" data-target="performance-task-view"><i class="fa-solid fa-list-check"></i> Performance Task</li>
+                <li class="menu-item" data-target="examination-view"><i class="fa-solid fa-file-pen"></i> Examination</li>
+                <li class="menu-item" data-target="missing-grades-view"><i class="fa-solid fa-triangle-exclamation"></i> Missing Grades</li>
+                <li class="menu-item" data-target="settings-view"><i class="fa-solid fa-gear"></i> Settings</li>
+            </ul>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <header class="top-nav">
+                <span id="current-view-title">Dashboard</span>
+                <div class="user-profile">
+                    <img src="https://images.unsplash.com/photo-1544717305-2782549b5136?w=100&auto=format&fit=crop&q=80" alt="User">
+                    Teacher Mary's E-Class Record
+                </div>
+            </header>
+
+            <div class="content-body">
+
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="dashboard-view" class="view-section active">
+                    <div class="filter-bar">
+                        <div class="filter-group"><label>Grade:</label><select class="global-grade-filter"><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option></select></div>
+                        <div class="filter-group"><label>Section:</label><select class="global-section-filter"><option value="St. Monica">St. Monica</option><option value="St. Germaine">St. Germaine</option><option value="St. Agnes">St. Agnes</option><option value="St. Cecilia">St. Cecilia</option><option value="St. Martha">St. Martha</option><option value="St. Genevieve">St. Genevieve</option></select></div>
+                        <div class="filter-group"><label>Subject:</label><select class="global-subject-filter"><option value="Makabansa">Makabansa</option><option value="Araling Panlipunan">Araling Panlipunan</option><option value="Computer">Computer</option></select></div>
+                        <div class="filter-group"><label>Term:</label><select class="global-term-filter"><option value="1st Midterm">1st Midterm</option><option value="2nd Midterm">2nd Midterm</option><option value="3rd Midterm">3rd Midterm</option><option value="Term 1">Term 1</option><option value="Term 2">Term 2</option><option value="Term 3">Term 3</option></select></div>
+                        <div class="filter-group">
+                            <label>View Mode:</label>
+                            <select id="dashboard-view-mode" onchange="renderAll()">
+                                <option value="All">All</option>
+                                <option value="Written Works">Written Works</option>
+                                <option value="Performance Task">Performance Task</option>
+                                <option value="Examination">Examination</option>
+                                <option value="Summary of WW, PT Exam">Summary of WW, PT Exam</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="student-search" placeholder="Search student name...">
+                        </div>
+                        <div class="action-buttons">
+                            <button id="btn-toggle-edit" class="btn btn-secondary"><i class="fa-solid fa-lock" id="edit-lock-icon"></i> <span id="edit-btn-text">Edit Record</span></button>
+                            <button id="btn-export-excel" class="btn btn-secondary"><i class="fa-solid fa-file-excel"></i> Export Excel</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <div id="header-tooltip" class="tooltip-popover"></div>
+                        <table id="class-record-table" class="locked">
+                            <thead>
+                                <tr id="dash-header-row">
+                                    <th>Name of Students</th>
+                                    <!-- Dynamic assessment columns injected here -->
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-table-body">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 2. WRITTEN WORKS MODULE -->
+                <section id="written-works-view" class="view-section">
+                    <div class="filter-bar">
+                        <div class="filter-group"><label>Grade:</label><select class="global-grade-filter"><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option></select></div>
+                        <div class="filter-group"><label>Section:</label><select class="global-section-filter"><option value="St. Monica">St. Monica</option><option value="St. Germaine">St. Germaine</option><option value="St. Agnes">St. Agnes</option><option value="St. Cecilia">St. Cecilia</option><option value="St. Martha">St. Martha</option><option value="St. Genevieve">St. Genevieve</option></select></div>
+                        <div class="filter-group"><label>Subject:</label><select class="global-subject-filter"><option value="Makabansa">Makabansa</option><option value="Araling Panlipunan">Araling Panlipunan</option><option value="Computer">Computer</option></select></div>
+                        <div class="filter-group"><label>Term:</label><select class="global-term-filter"><option value="1st Midterm">1st Midterm</option><option value="2nd Midterm">2nd Midterm</option><option value="3rd Midterm">3rd Midterm</option><option value="Term 1">Term 1</option><option value="Term 2">Term 2</option><option value="Term 3">Term 3</option></select></div>
+                        <button class="btn btn-secondary" onclick="toggleDetailsCard('ww')"><i class="fa-solid fa-sliders"></i> Toggle Details</button>
+                    </div>
+
+                    <!-- Details Setup (Default closed toggle) -->
+                    <div class="details-setup-card" id="ww-details-card">
+                        <div class="filter-group">
+                            <label>Assessment Title / Details:</label>
+                            <input type="text" id="ww-title" placeholder="e.g., Written Work 2">
+                        </div>
+                        <div class="filter-group">
+                            <label>Date (Calendar):</label>
+                            <input type="date" id="ww-date">
+                        </div>
+                        <div class="filter-group">
+                            <label>Total Score:</label>
+                            <input type="number" id="ww-max" value="50">
+                        </div>
+                        <button class="btn btn-primary" onclick="addNewAssessment('ww')"><i class="fa-solid fa-plus"></i> Add New Written Work</button>
+                    </div>
+
+                    <div class="searchable-encoder-wrapper">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <h3 style="color: var(--primary); font-size: 1rem;"><i class="fa-solid fa-book-open"></i> Written Works Encoder</h3>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <div class="filter-group" style="min-width: 150px;">
+                                    <label>Select Assessment:</label>
+                                    <select id="ww-assessment-selector" onchange="renderModules()"></select>
+                                </div>
+                                <div class="search-box" style="max-width: 200px;">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="ww-module-search" placeholder="Search name...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="searchable-list" id="ww-searchable-list"></div>
+                    </div>
+                </section>
+
+                <!-- 3. PERFORMANCE TASK MODULE -->
+                <section id="performance-task-view" class="view-section">
+                    <div class="filter-bar">
+                        <div class="filter-group"><label>Grade:</label><select class="global-grade-filter"><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option></select></div>
+                        <div class="filter-group"><label>Section:</label><select class="global-section-filter"><option value="St. Monica">St. Monica</option><option value="St. Germaine">St. Germaine</option><option value="St. Agnes">St. Agnes</option><option value="St. Cecilia">St. Cecilia</option><option value="St. Martha">St. Martha</option><option value="St. Genevieve">St. Genevieve</option></select></div>
+                        <div class="filter-group"><label>Subject:</label><select class="global-subject-filter"><option value="Makabansa">Makabansa</option><option value="Araling Panlipunan">Araling Panlipunan</option><option value="Computer">Computer</option></select></div>
+                        <div class="filter-group"><label>Term:</label><select class="global-term-filter"><option value="1st Midterm">1st Midterm</option><option value="2nd Midterm">2nd Midterm</option><option value="3rd Midterm">3rd Midterm</option><option value="Term 1">Term 1</option><option value="Term 2">Term 2</option><option value="Term 3">Term 3</option></select></div>
+                        <button class="btn btn-secondary" onclick="toggleDetailsCard('pt')"><i class="fa-solid fa-sliders"></i> Toggle Details</button>
+                    </div>
+
+                    <!-- Details Setup (Default closed toggle) -->
+                    <div class="details-setup-card" id="pt-details-card">
+                        <div class="filter-group">
+                            <label>Assessment Title / Details:</label>
+                            <input type="text" id="pt-title" placeholder="e.g., Performance Task 2">
+                        </div>
+                        <div class="filter-group">
+                            <label>Date (Calendar):</label>
+                            <input type="date" id="pt-date">
+                        </div>
+                        <div class="filter-group">
+                            <label>Total Score:</label>
+                            <input type="number" id="pt-max" value="50">
+                        </div>
+                        <button class="btn btn-primary" onclick="addNewAssessment('pt')"><i class="fa-solid fa-plus"></i> Add New Performance Task</button>
+                    </div>
+
+                    <div class="searchable-encoder-wrapper">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <h3 style="color: var(--primary); font-size: 1rem;"><i class="fa-solid fa-list-check"></i> Performance Task Encoder</h3>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <div class="filter-group" style="min-width: 150px;">
+                                    <label>Select Assessment:</label>
+                                    <select id="pt-assessment-selector" onchange="renderModules()"></select>
+                                </div>
+                                <div class="search-box" style="max-width: 200px;">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="pt-module-search" placeholder="Search name...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="searchable-list" id="pt-searchable-list"></div>
+                    </div>
+                </section>
+
+                <!-- 4. EXAMINATION MODULE -->
+                <section id="examination-view" class="view-section">
+                    <div class="filter-bar">
+                        <div class="filter-group"><label>Grade:</label><select class="global-grade-filter"><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option></select></div>
+                        <div class="filter-group"><label>Section:</label><select class="global-section-filter"><option value="St. Monica">St. Monica</option><option value="St. Germaine">St. Germaine</option><option value="St. Agnes">St. Agnes</option><option value="St. Cecilia">St. Cecilia</option><option value="St. Martha">St. Martha</option><option value="St. Genevieve">St. Genevieve</option></select></div>
+                        <div class="filter-group"><label>Subject:</label><select class="global-subject-filter"><option value="Makabansa">Makabansa</option><option value="Araling Panlipunan">Araling Panlipunan</option><option value="Computer">Computer</option></select></div>
+                        <div class="filter-group"><label>Term:</label><select class="global-term-filter"><option value="1st Midterm">1st Midterm</option><option value="2nd Midterm">2nd Midterm</option><option value="3rd Midterm">3rd Midterm</option><option value="Term 1">Term 1</option><option value="Term 2">Term 2</option><option value="Term 3">Term 3</option></select></div>
+                        <button class="btn btn-secondary" onclick="toggleDetailsCard('exam')"><i class="fa-solid fa-sliders"></i> Toggle Details</button>
+                    </div>
+
+                    <!-- Details Setup (Default closed toggle) -->
+                    <div class="details-setup-card" id="exam-details-card">
+                        <div class="filter-group">
+                            <label>Assessment Title / Details:</label>
+                            <input type="text" id="exam-title" placeholder="e.g., Final Exam">
+                        </div>
+                        <div class="filter-group">
+                            <label>Date (Calendar):</label>
+                            <input type="date" id="exam-date">
+                        </div>
+                        <div class="filter-group">
+                            <label>Total Score:</label>
+                            <input type="number" id="exam-max" value="50">
+                        </div>
+                        <button class="btn btn-primary" onclick="addNewAssessment('exam')"><i class="fa-solid fa-plus"></i> Add New Examination</button>
+                    </div>
+
+                    <div class="searchable-encoder-wrapper">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <h3 style="color: var(--primary); font-size: 1rem;"><i class="fa-solid fa-file-pen"></i> Examination Encoder</h3>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <div class="filter-group" style="min-width: 150px;">
+                                    <label>Select Assessment:</label>
+                                    <select id="exam-assessment-selector" onchange="renderModules()"></select>
+                                </div>
+                                <div class="search-box" style="max-width: 200px;">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="exam-module-search" placeholder="Search name...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="searchable-list" id="exam-searchable-list"></div>
+                    </div>
+                </section>
+
+                <!-- 5. MISSING GRADES MODULE -->
+                <section id="missing-grades-view" class="view-section">
+                    <div class="filter-bar">
+                        <div class="filter-group"><label>Grade:</label><select class="global-grade-filter"><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option></select></div>
+                        <div class="filter-group"><label>Section:</label><select class="global-section-filter"><option value="St. Monica">St. Monica</option><option value="St. Germaine">St. Germaine</option><option value="St. Agnes">St. Agnes</option><option value="St. Cecilia">St. Cecilia</option><option value="St. Martha">St. Martha</option><option value="St. Genevieve">St. Genevieve</option></select></div>
+                        <div class="filter-group"><label>Subject:</label><select class="global-subject-filter"><option value="Makabansa">Makabansa</option><option value="Araling Panlipunan">Araling Panlipunan</option><option value="Computer">Computer</option></select></div>
+                        <div class="filter-group"><label>Term:</label><select class="global-term-filter"><option value="1st Midterm">1st Midterm</option><option value="2nd Midterm">2nd Midterm</option><option value="3rd Midterm">3rd Midterm</option><option value="Term 1">Term 1</option><option value="Term 2">Term 2</option><option value="Term 3">Term 3</option></select></div>
+                    </div>
+                    <div class="search-box" style="max-width: 100%;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="missing-search" placeholder="Search missing grades...">
+                    </div>
+                    <div class="missing-cards-grid" id="missing-grades-container"></div>
+                </section>
+
+                <!-- 6. SETTINGS MODULE -->
+                <section id="settings-view" class="view-section">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+                        <div style="background:var(--bg-card); padding:1.5rem; border-radius:var(--radius); border:1px solid var(--border);">
+                            <h3 style="color:var(--primary); margin-bottom:1rem; font-size:1rem;"><i class="fa-solid fa-user-plus"></i> Add Student</h3>
+                            <form id="add-student-form">
+                                <div class="filter-group" style="margin-bottom:0.75rem;"><label>Name</label><input type="text" id="new-name" required placeholder="Last Name, First Name"></div>
+                                <div class="filter-group" style="margin-bottom:0.75rem;"><label>Grade</label><select id="new-grade"><option value="Grade 3">Grade 3</option><option value="Grade 4">Grade 4</option></select></div>
+                                <div class="filter-group" style="margin-bottom:0.75rem;"><label>Section</label><select id="new-section"><option value="St. Monica">St. Monica</option><option value="St. Germaine">St. Germaine</option><option value="St. Agnes">St. Agnes</option><option value="St. Cecilia">St. Cecilia</option><option value="St. Martha">St. Martha</option><option value="St. Genevieve">St. Genevieve</option></select></div>
+                                <div class="filter-group" style="margin-bottom:1rem;"><label>Subject</label><select id="new-subject"><option value="Makabansa">Makabansa</option><option value="Araling Panlipunan">Araling Panlipunan</option><option value="Computer">Computer</option></select></div>
+                                <button type="submit" class="btn btn-primary">Save Student</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Upload XLSX or CSV Card -->
+                        <div style="background:var(--bg-card); padding:1.5rem; border-radius:var(--radius); border:1px solid var(--border);">
+                            <h3 style="color:var(--primary); margin-bottom:1rem; font-size:1rem;"><i class="fa-solid fa-file-arrow-up"></i> Import XLSX / CSV Data</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">Upload a spreadsheet file to populate student names into the active grade, section, and subject instantly.</p>
+                            <div class="filter-group" style="margin-bottom:1rem;">
+                                <label>Choose Spreadsheet File (.xlsx, .csv)</label>
+                                <input type="file" id="import-file-input" accept=".xlsx, .xls, .csv">
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="handleFileUpload()"><i class="fa-solid fa-upload"></i> Import File</button>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Number Pad Popup Modal -->
+    <div class="numpad-modal" id="numpad-modal">
+        <div class="numpad-box">
+            <div id="numpad-student-name" style="font-size: 1.15rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;"></div>
+            <div class="numpad-display" id="numpad-display">0</div>
+            <div class="numpad-grid">
+                <button class="numpad-btn" onclick="numpadPress('7')">7</button>
+                <button class="numpad-btn" onclick="numpadPress('8')">8</button>
+                <button class="numpad-btn" onclick="numpadPress('9')">9</button>
+                <button class="numpad-btn" onclick="numpadPress('4')">4</button>
+                <button class="numpad-btn" onclick="numpadPress('5')">5</button>
+                <button class="numpad-btn" onclick="numpadPress('6')">6</button>
+                <button class="numpad-btn" onclick="numpadPress('1')">1</button>
+                <button class="numpad-btn" onclick="numpadPress('2')">2</button>
+                <button class="numpad-btn" onclick="numpadPress('3')">3</button>
+                <button class="numpad-btn clear" onclick="numpadClear()">C</button>
+                <button class="numpad-btn" onclick="numpadPress('0')">0</button>
+                <button class="numpad-btn done" onclick="numpadDone()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Google Apps Script Web App URL integrated
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxc3fqrcvmrm79y8-aqd4a40iNoIF-LDHsF7i3kydwmUmRWi5bKc4AaxBdQKfiYZeEC5Q/exec";
+
+        let isEditMode = false;
+        let activeInput = null;
+
+        let assessments = {
+            ww: [
+                { id: 'ww_1', title: 'Written Work 1', date: '2026-03-01', max: 50 }
+            ],
+            pt: [
+                { id: 'pt_1', title: 'Performance Task 1', date: '2026-03-02', max: 50 }
+            ],
+            exam: [
+                { id: 'exam_mid', title: 'Midterm Exam', date: '2026-03-05', max: 50 },
+                { id: 'exam_term', title: 'Term Exam', date: '2026-03-25', max: 50 }
+            ]
+        };
+
+        let studentsData = [
+            { id: 1, name: "Doe, John", grade: "Grade 3", section: "St. Monica", subject: "Makabansa", scores: { 'ww_1': '45', 'pt_1': '48', 'exam_mid': '40', 'exam_term': '42' } },
+            { id: 2, name: "Smith, Jane", grade: "Grade 3", section: "St. Monica", subject: "Makabansa", scores: { 'ww_1': '50', 'pt_1': '42', 'exam_mid': '45', 'exam_term': '' } }
+        ];
+
+        // Google Sheets Cloud Sync Functions
+        async function fetchCloudData() {
+            if (WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return; // Skip if URL isn't set yet
+            try {
+                let response = await fetch(`${WEB_APP_URL}?action=getData`);
+                let data = await response.json();
+                if (data.students) studentsData = data.students;
+                if (data.assessments) {
+                    assessments.ww = data.assessments.filter(a => a.Type === 'ww');
+                    assessments.pt = data.assessments.filter(a => a.Type === 'pt');
+                    assessments.exam = data.assessments.filter(a => a.Type === 'exam');
+                }
+                renderAll();
+                console.log("Synced successfully with Google Sheet!");
+            } catch (err) {
+                console.error("Cloud sync fetch failed, using local backup state:", err);
+            }
+        }
+
+        async function syncScoreToCloud(studentId, assessmentId, score) {
+            updateScore(studentId, assessmentId, score); // Local state update
+            if (WEB_APP_URL.includes("YOUR_GOOGLE_APPS_SCRIPT")) return;
+            try {
+                await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sheet: "Scores",
+                        action: "updateScore",
+                        studentId: studentId,
+                        assessmentId: assessmentId,
+                        score: score
+                    })
+                });
+            } catch (err) {
+                console.error("Failed to sync score update to cloud:", err);
+            }
+        }
+
+        // Navigation
+        const menuItems = document.querySelectorAll('.menu-item');
+        const viewSections = document.querySelectorAll('.view-section');
+        const currentViewTitle = document.getElementById('current-view-title');
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                menuItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                viewSections.forEach(sec => sec.classList.remove('active'));
+                document.getElementById(item.getAttribute('data-target')).classList.add('active');
+                currentViewTitle.textContent = item.textContent.trim();
+                renderAll();
+            });
+        });
+
+        // Global Filters Syncing
+        const gradeFilters = document.querySelectorAll('.global-grade-filter');
+        const sectionFilters = document.querySelectorAll('.global-section-filter');
+        const subjectFilters = document.querySelectorAll('.global-subject-filter');
+        const termFilters = document.querySelectorAll('.global-term-filter');
+
+        function syncFilters(changed) {
+            const val = changed.value;
+            if (changed.classList.contains('global-grade-filter')) gradeFilters.forEach(el => el.value = val);
+            if (changed.classList.contains('global-section-filter')) sectionFilters.forEach(el => el.value = val);
+            if (changed.classList.contains('global-subject-filter')) subjectFilters.forEach(el => el.value = val);
+            if (changed.classList.contains('global-term-filter')) termFilters.forEach(el => el.value = val);
+            renderAll();
+        }
+        gradeFilters.forEach(el => el.addEventListener('change', e => syncFilters(e.target)));
+        sectionFilters.forEach(el => el.addEventListener('change', e => syncFilters(e.target)));
+        subjectFilters.forEach(el => el.addEventListener('change', e => syncFilters(e.target)));
+        termFilters.forEach(el => el.addEventListener('change', e => syncFilters(e.target)));
+
+        window.toggleDetailsCard = function(type) {
+            const card = document.getElementById(`${type}-details-card`);
+            if (card) {
+                card.style.display = (card.style.display === 'none' || card.style.display === '') ? 'grid' : 'none';
+            }
+        };
+
+        // Edit Mode Toggle
+        document.getElementById('btn-toggle-edit').addEventListener('click', () => {
+            isEditMode = !isEditMode;
+            const table = document.getElementById('class-record-table');
+            const icon = document.getElementById('edit-lock-icon');
+            const text = document.getElementById('edit-btn-text');
+            const actionCols = document.querySelectorAll('.action-col');
+
+            if (isEditMode) {
+                table.classList.remove('locked');
+                icon.className = "fa-solid fa-unlock";
+                text.textContent = "Lock Record";
+                actionCols.forEach(el => el.style.display = "");
+            } else {
+                table.classList.add('locked');
+                icon.className = "fa-solid fa-lock";
+                text.textContent = "Edit Record";
+                actionCols.forEach(el => el.style.display = "none");
+            }
+            renderAll();
+        });
+
+        window.addNewAssessment = function(type) {
+            const titleInput = document.getElementById(`${type}-title`);
+            const dateInput = document.getElementById(`${type}-date`);
+            const maxInput = document.getElementById(`${type}-max`);
+
+            const title = titleInput.value.trim() || `${type.toUpperCase()} ${assessments[type].length + 1}`;
+            const date = dateInput.value || new Date().toISOString().split('T')[0];
+            const max = maxInput.value || 50;
+
+            const newId = `${type}_${Date.now()}`;
+            assessments[type].push({ id: newId, title, date, max });
+
+            titleInput.value = "";
+            alert(`${title} added successfully!`);
+            renderAll();
+        };
+
+        window.showTooltip = function(event, title, date, max) {
+            const tooltip = document.getElementById('header-tooltip');
+            tooltip.innerHTML = `<strong>${title}</strong><br>Date: ${date}<br>Total Score: ${max}`;
+            
+            const rect = event.target.getBoundingClientRect();
+            
+            tooltip.style.display = 'block';
+            tooltip.style.left = `${rect.left + (rect.width / 2) - (tooltip.offsetWidth / 2)}px`;
+            tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`;
+
+            setTimeout(() => {
+                window.addEventListener('click', hideTooltip, { once: true });
+            }, 100);
+        };
+
+        function hideTooltip() {
+            document.getElementById('header-tooltip').style.display = 'none';
+        }
+
+        document.getElementById('add-student-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            studentsData.push({
+                id: Date.now(),
+                name: document.getElementById('new-name').value.trim(),
+                grade: document.getElementById('new-grade').value,
+                section: document.getElementById('new-section').value,
+                subject: document.getElementById('new-subject').value,
+                scores: {}
+            });
+            alert("Student added successfully!");
+            document.getElementById('new-name').value = '';
+            renderAll();
+        });
+
+        window.handleFileUpload = function() {
+            const fileInput = document.getElementById('import-file-input');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("Please select an XLSX or CSV file to upload.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    if (jsonRows.length === 0) {
+                        alert("The uploaded file contains no rows.");
+                        return;
+                    }
+
+                    const currentGrade = gradeFilters[0].value;
+                    const currentSection = sectionFilters[0].value;
+                    const currentSubject = subjectFilters[0].value;
+
+                    jsonRows.forEach((row, index) => {
+                        let studentName = row["Name"] || row["Student"] || row["Student Name"] || Object.values(row)[0];
+                        if (studentName && String(studentName).trim() !== "") {
+                            studentsData.push({
+                                id: Date.now() + index,
+                                name: String(studentName).trim(),
+                                grade: currentGrade,
+                                section: currentSection,
+                                subject: currentSubject,
+                                scores: {}
+                            });
+                        }
+                    });
+
+                    fileInput.value = "";
+                    alert("Student names imported successfully!");
+                    renderAll();
+                } catch (err) {
+                    console.error(err);
+                    alert("Failed to parse file. Please ensure it is a valid XLSX or CSV format.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        window.deleteStudent = function(id) {
+            if (confirm("Delete this student?")) {
+                studentsData = studentsData.filter(s => s.id !== id);
+                renderAll();
+            }
+        };
+
+        window.updateStudentName = function(id, val) {
+            const s = studentsData.find(item => item.id === id);
+            if (s) s.name = val;
+        };
+
+        window.updateScore = function(id, assessmentId, val) {
+            const s = studentsData.find(item => item.id === id);
+            if (s) {
+                if (!s.scores) s.scores = {};
+                s.scores[assessmentId] = val;
+            }
+        };
+
+        window.openNumpad = function(inputElement, id, assessmentId, studentName) {
+            activeInput = { inputElement, id, assessmentId };
+            document.getElementById('numpad-student-name').textContent = studentName;
+            document.getElementById('numpad-display').textContent = inputElement.value || "0";
+            document.getElementById('numpad-modal').style.display = "flex";
+        };
+
+        window.numpadPress = function(num) {
+            let current = document.getElementById('numpad-display').textContent;
+            if (current === "0") current = "";
+            document.getElementById('numpad-display').textContent = current + num;
+        };
+
+        window.numpadClear = function() {
+            document.getElementById('numpad-display').textContent = "0";
+        };
+
+        window.numpadDone = function() {
+            if (activeInput) {
+                let val = document.getElementById('numpad-display').textContent;
+                activeInput.inputElement.value = val;
+                syncScoreToCloud(activeInput.id, activeInput.assessmentId, val);
+            }
+            document.getElementById('numpad-modal').style.display = "none";
+            renderAll();
+        };
+
+        function getFilteredStudents() {
+            const g = gradeFilters[0].value;
+            const sec = sectionFilters[0].value;
+            const sub = subjectFilters[0].value;
+            const q = document.getElementById('student-search').value.toLowerCase();
+            return studentsData.filter(s => s.grade === g && s.section === sec && s.subject === sub && s.name.toLowerCase().includes(q));
+        }
+
+        function calculateSummary(scores, assessmentList) {
+            let total = 0;
+            let count = 0;
+            assessmentList.forEach(a => {
+                const val = parseFloat(scores[a.id]);
+                if (!isNaN(val)) {
+                    total += val;
+                    count++;
+                }
+            });
+            return count > 0 ? Math.round(total / count) : "-";
+        }
+
+        function renderAll() {
+            const filtered = getFilteredStudents();
+            const viewMode = document.getElementById('dashboard-view-mode').value;
+            const headerRow = document.getElementById('dash-header-row');
+            const tbody = document.getElementById('dashboard-table-body');
+
+            let headerHTML = `<th>Name of Students</th>`;
+            
+            const showWW = (viewMode === 'All' || viewMode === 'Written Works' || viewMode === 'Summary of WW, PT Exam');
+            const showPT = (viewMode === 'All' || viewMode === 'Performance Task' || viewMode === 'Summary of WW, PT Exam');
+            const showExam = (viewMode === 'All' || viewMode === 'Examination' || viewMode === 'Summary of WW, PT Exam');
+            const isSummaryOnlyMode = (viewMode === 'Summary of WW, PT Exam');
+
+            if (showWW) {
+                if (!isSummaryOnlyMode) {
+                    assessments.ww.forEach((a, idx) => {
+                        headerHTML += `<th onclick="showTooltip(event, '${a.title}', '${a.date}', '${a.max}')">WW ${idx+1} <i class="fa-solid fa-circle-info" style="font-size:0.65rem;"></i></th>`;
+                    });
+                }
+                if (viewMode === 'All' || viewMode === 'Written Works' || isSummaryOnlyMode) {
+                    headerHTML += `<th class="summary-header" title="Written Works Summary Highlight">WW Summary</th>`;
+                }
+            }
+
+            if (showPT) {
+                if (!isSummaryOnlyMode) {
+                    assessments.pt.forEach((a, idx) => {
+                        headerHTML += `<th onclick="showTooltip(event, '${a.title}', '${a.date}', '${a.max}')">PT ${idx+1} <i class="fa-solid fa-circle-info" style="font-size:0.65rem;"></i></th>`;
+                    });
+                }
+                if (viewMode === 'All' || viewMode === 'Performance Task' || isSummaryOnlyMode) {
+                    headerHTML += `<th class="summary-header" title="Performance Task Summary Highlight">PT Summary</th>`;
+                }
+            }
+
+            if (showExam) {
+                if (!isSummaryOnlyMode) {
+                    assessments.exam.forEach((a) => {
+                        headerHTML += `<th onclick="showTooltip(event, '${a.title}', '${a.date}', '${a.max}')">${a.title} <i class="fa-solid fa-circle-info" style="font-size:0.65rem;"></i></th>`;
+                    });
+                }
+                if (viewMode === 'All' || viewMode === 'Examination' || isSummaryOnlyMode) {
+                    headerHTML += `<th class="summary-header" title="Examination Summary Highlight">Exam Summary</th>`;
+                }
+            }
+
+            headerHTML += `<th class="action-col" style="${isEditMode ? '' : 'display:none;'}">Action</th>`;
+            headerRow.innerHTML = headerHTML;
+
+            tbody.innerHTML = "";
+
+            let totalScoreRowHTML = `<td style="font-weight:700; color:#dc2626; background:#fef2f2;">Total Score</td>`;
+            if (showWW) {
+                if (!isSummaryOnlyMode) {
+                    assessments.ww.forEach(a => {
+                        totalScoreRowHTML += `<td style="font-weight:700; text-align:center; color:#dc2626; background:#fef2f2;">${a.max}</td>`;
+                    });
+                }
+                if (viewMode === 'All' || viewMode === 'Written Works' || isSummaryOnlyMode) {
+                    let maxAvg = assessments.ww.length > 0 ? Math.round(assessments.ww.reduce((acc, cur) => acc + parseFloat(cur.max || 0), 0) / assessments.ww.length) : 50;
+                    totalScoreRowHTML += `<td class="summary-cell" style="font-weight:700; color:#dc2626;">${maxAvg}</td>`;
+                }
+            }
+            if (showPT) {
+                if (!isSummaryOnlyMode) {
+                    assessments.pt.forEach(a => {
+                        totalScoreRowHTML += `<td style="font-weight:700; text-align:center; color:#dc2626; background:#fef2f2;">${a.max}</td>`;
+                    });
+                }
+                if (viewMode === 'All' || viewMode === 'Performance Task' || isSummaryOnlyMode) {
+                    let maxAvg = assessments.pt.length > 0 ? Math.round(assessments.pt.reduce((acc, cur) => acc + parseFloat(cur.max || 0), 0) / assessments.pt.length) : 50;
+                    totalScoreRowHTML += `<td class="summary-cell" style="font-weight:700; color:#dc2626;">${maxAvg}</td>`;
+                }
+            }
+            if (showExam) {
+                if (!isSummaryOnlyMode) {
+                    assessments.exam.forEach(a => {
+                        totalScoreRowHTML += `<td style="font-weight:700; text-align:center; color:#dc2626; background:#fef2f2;">${a.max}</td>`;
+                    });
+                }
+                if (viewMode === 'All' || viewMode === 'Examination' || isSummaryOnlyMode) {
+                    let maxAvg = assessments.exam.length > 0 ? Math.round(assessments.exam.reduce((acc, cur) => acc + parseFloat(cur.max || 0), 0) / assessments.exam.length) : 50;
+                    totalScoreRowHTML += `<td class="summary-cell" style="font-weight:700; color:#dc2626;">${maxAvg}</td>`;
+                }
+            }
+            totalScoreRowHTML += `<td class="action-col" style="${isEditMode ? '' : 'display:none;'}"></td>`;
+            
+            let trTotal = document.createElement('tr');
+            trTotal.innerHTML = totalScoreRowHTML;
+            tbody.appendChild(trTotal);
+
+            if (filtered.length === 0) {
+                const totalCols = headerRow.children.length;
+                let emptyTr = document.createElement('tr');
+                emptyTr.innerHTML = `<td colspan="${totalCols}" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No students found.</td>`;
+                tbody.appendChild(emptyTr);
+            } else {
+                filtered.forEach(s => {
+                    if (!s.scores) s.scores = {};
+                    let tr = document.createElement('tr');
+                    
+                    let rowHTML = `<td><input type="text" class="table-name-input" value="${s.name}" oninput="updateStudentName(${s.id}, this.value)"></td>`;
+
+                    if (showWW) {
+                        if (!isSummaryOnlyMode) {
+                            assessments.ww.forEach(a => {
+                                let val = s.scores[a.id] || "";
+                                rowHTML += `<td><input type="text" class="table-input" value="${val}" oninput="syncScoreToCloud(${s.id}, '${a.id}', this.value)"></td>`;
+                            });
+                        }
+                        if (viewMode === 'All' || viewMode === 'Written Works' || isSummaryOnlyMode) {
+                            let wwSum = calculateSummary(s.scores, assessments.ww);
+                            rowHTML += `<td class="summary-cell">${wwSum}</td>`;
+                        }
+                    }
+
+                    if (showPT) {
+                        if (!isSummaryOnlyMode) {
+                            assessments.pt.forEach(a => {
+                                let val = s.scores[a.id] || "";
+                                rowHTML += `<td><input type="text" class="table-input" value="${val}" oninput="syncScoreToCloud(${s.id}, '${a.id}', this.value)"></td>`;
+                            });
+                        }
+                        if (viewMode === 'All' || viewMode === 'Performance Task' || isSummaryOnlyMode) {
+                            let ptSum = calculateSummary(s.scores, assessments.pt);
+                            rowHTML += `<td class="summary-cell">${ptSum}</td>`;
+                        }
+                    }
+
+                    if (showExam) {
+                        if (!isSummaryOnlyMode) {
+                            assessments.exam.forEach(a => {
+                                let val = s.scores[a.id] || "";
+                                rowHTML += `<td><input type="text" class="table-input" value="${val}" oninput="syncScoreToCloud(${s.id}, '${a.id}', this.value)"></td>`;
+                            });
+                        }
+                        if (viewMode === 'All' || viewMode === 'Examination' || isSummaryOnlyMode) {
+                            let examSum = calculateSummary(s.scores, assessments.exam);
+                            rowHTML += `<td class="summary-cell">${examSum}</td>`;
+                        }
+                    }
+
+                    rowHTML += `<td class="action-col" style="${isEditMode ? '' : 'display:none;'}"><button class="btn-danger-sm" onclick="deleteStudent(${s.id})"><i class="fa-solid fa-trash"></i></button></td>`;
+                    
+                    tr.innerHTML = rowHTML;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            renderModules();
+            renderMissing();
+        }
+
+        function populateSelector(type, selectorId) {
+            const selector = document.getElementById(selectorId);
+            const currentVal = selector.value;
+            selector.innerHTML = "";
+            assessments[type].forEach(a => {
+                let opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = `${a.title} (Total Score: ${a.max})`;
+                selector.appendChild(opt);
+            });
+            if (currentVal && assessments[type].some(a => a.id === currentVal)) {
+                selector.value = currentVal;
+            }
+        }
+
+        function renderModules() {
+            populateSelector('ww', 'ww-assessment-selector');
+            populateSelector('pt', 'pt-assessment-selector');
+            populateSelector('exam', 'exam-assessment-selector');
+
+            const g = gradeFilters[0].value;
+            const sec = sectionFilters[0].value;
+            const sub = subjectFilters[0].value;
+            const base = studentsData.filter(s => s.grade === g && s.section === sec && s.subject === sub);
+
+            const wwSelId = document.getElementById('ww-assessment-selector').value;
+            const wwQ = document.getElementById('ww-module-search').value.toLowerCase();
+            const wwList = document.getElementById('ww-searchable-list');
+            wwList.innerHTML = "";
+            if (wwSelId) {
+                base.filter(s => s.name.toLowerCase().includes(wwQ)).forEach(s => {
+                    if (!s.scores) s.scores = {};
+                    let val = s.scores[wwSelId] || "";
+                    let escapedName = s.name.replace(/'/g, "\\'");
+                    wwList.innerHTML += `<div class="searchable-row"><span>${s.name}</span><input type="text" class="table-input" value="${val}" readonly onclick="openNumpad(this, ${s.id}, '${wwSelId}', '${escapedName}')"></div>`;
+                });
+            }
+
+            const ptSelId = document.getElementById('pt-assessment-selector').value;
+            const ptQ = document.getElementById('pt-module-search').value.toLowerCase();
+            const ptList = document.getElementById('pt-searchable-list');
+            ptList.innerHTML = "";
+            if (ptSelId) {
+                base.filter(s => s.name.toLowerCase().includes(ptQ)).forEach(s => {
+                    if (!s.scores) s.scores = {};
+                    let val = s.scores[ptSelId] || "";
+                    let escapedName = s.name.replace(/'/g, "\\'");
+                    ptList.innerHTML += `<div class="searchable-row"><span>${s.name}</span><input type="text" class="table-input" value="${val}" readonly onclick="openNumpad(this, ${s.id}, '${ptSelId}', '${escapedName}')"></div>`;
+                });
+            }
+
+            const examSelId = document.getElementById('exam-assessment-selector').value;
+            const examQ = document.getElementById('exam-module-search').value.toLowerCase();
+            const examList = document.getElementById('exam-searchable-list');
+            examList.innerHTML = "";
+            if (examSelId) {
+                base.filter(s => s.name.toLowerCase().includes(examQ)).forEach(s => {
+                    if (!s.scores) s.scores = {};
+                    let val = s.scores[examSelId] || "";
+                    let escapedName = s.name.replace(/'/g, "\\'");
+                    examList.innerHTML += `<div class="searchable-row"><span>${s.name}</span><input type="text" class="table-input" value="${val}" readonly onclick="openNumpad(this, ${s.id}, '${examSelId}', '${escapedName}')"></div>`;
+                });
+            }
+        }
+
+        function renderMissing() {
+            const g = gradeFilters[0].value;
+            const sec = sectionFilters[0].value;
+            const sub = subjectFilters[0].value;
+            const q = document.getElementById('missing-search').value.toLowerCase();
+            const container = document.getElementById('missing-grades-container');
+            container.innerHTML = "";
+
+            const missing = studentsData.filter(s => {
+                if (s.grade !== g || s.section !== sec || s.subject !== sub) return false;
+                if (!s.name.toLowerCase().includes(q)) return false;
+                
+                let hasMissing = false;
+                [...assessments.ww, ...assessments.pt, ...assessments.exam].forEach(a => {
+                    if (!s.scores || !s.scores[a.id] || s.scores[a.id] === "") hasMissing = true;
+                });
+                return hasMissing;
+            });
+
+            if (missing.length === 0) {
+                container.innerHTML = `<p style="color:var(--text-muted)">No missing grades found.</p>`;
+            } else {
+                missing.forEach(s => {
+                    let missingDetailsHTML = `<div class="missing-card">
+                        <h4>${s.name}</h4>`;
+                    
+                    let wwMissingItems = [];
+                    assessments.ww.forEach((a, idx) => {
+                        if (!s.scores || !s.scores[a.id] || s.scores[a.id] === "") {
+                            wwMissingItems.push(`WW${idx+1} = ${a.title}`);
+                        }
+                    });
+                    if (wwMissingItems.length > 0) {
+                        missingDetailsHTML += `<p><strong>Written Works:</strong><br>${wwMissingItems.join('<br>')}</p>`;
+                    }
+
+                    let ptMissingItems = [];
+                    assessments.pt.forEach((a, idx) => {
+                        if (!s.scores || !s.scores[a.id] || s.scores[a.id] === "") {
+                            ptMissingItems.push(`PT${idx+1} = ${a.title}`);
+                        }
+                    });
+                    if (ptMissingItems.length > 0) {
+                        missingDetailsHTML += `<p><strong>Performance Task:</strong><br>${ptMissingItems.join('<br>')}</p>`;
+                    }
+
+                    let examMissingItems = [];
+                    assessments.exam.forEach((a) => {
+                        if (!s.scores || !s.scores[a.id] || s.scores[a.id] === "") {
+                            examMissingItems.push(`${a.title}`);
+                        }
+                    });
+                    if (examMissingItems.length > 0) {
+                        missingDetailsHTML += `<p><strong>Exam:</strong><br>${examMissingItems.join('<br>')}</p>`;
+                    }
+
+                    missingDetailsHTML += `<p style="color:var(--accent); margin-top:0.5rem; font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Incomplete Grades</p></div>`;
+                    container.innerHTML += missingDetailsHTML;
+                });
+            }
+        }
+
+        document.getElementById('btn-export-excel').addEventListener('click', () => {
+            const filtered = getFilteredStudents();
+            if (filtered.length === 0) { alert("No data to export."); return; }
+            const wsData = filtered.map(s => {
+                let row = { "Name": s.name };
+                assessments.ww.forEach((a, i) => row[`WW ${i+1}`] = s.scores[a.id] || "");
+                assessments.pt.forEach((a, i) => row[`PT ${i+1}`] = s.scores[a.id] || "");
+                assessments.exam.forEach(a => row[a.title] = s.scores[a.id] || "");
+                return row;
+            });
+            const ws = XLSX.utils.json_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "ClassRecord");
+            XLSX.writeFile(wb, `ClassRecord_${gradeFilters[0].value}_${sectionFilters[0].value}.xlsx`);
+        });
+
+        document.getElementById('student-search').addEventListener('input', renderAll);
+        document.getElementById('ww-module-search').addEventListener('input', renderModules);
+        document.getElementById('pt-module-search').addEventListener('input', renderModules);
+        document.getElementById('exam-module-search').addEventListener('input', renderModules);
+        document.getElementById('missing-search').addEventListener('input', renderMissing);
+
+        // Fetch cloud data and render on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchCloudData();
+            renderAll();
+        });
+    </script>
+</body>
+</html>
